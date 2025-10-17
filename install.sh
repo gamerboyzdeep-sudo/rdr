@@ -1,170 +1,184 @@
 #!/bin/bash
-set -euo pipefail
+set -e
 
-# Colors
+# --- Colors ---
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
-NC='\033[0m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-echo -e "${CYAN}=== Windows Docker Powerful Upgrader (keeps same yml names) ===${NC}"
-echo
+# --- Header ---
+clear
+echo -e "${CYAN}"
+echo "=============================================="
+echo " Windows Docker Installer"
+echo " Made by Deepak"
+echo "=============================================="
+echo -e "${NC}"
+echo "Select an option:"
+echo "1️⃣ Install Windows 10 (fresh & background start)"
+echo "2️⃣ Start existing Windows 10 container with backup"
+echo "3️⃣ Install Windows 11 (fresh & background start)"
+echo "4️⃣ Install Windows 7 (fresh & background start)"
+echo ""
+read -p " Enter your choice (1-4): " choice
 
-# Default powerful settings (change here if you want)
-DEFAULT_RAM="16G"
-DEFAULT_CPUS="8"
-DEFAULT_DISK_BASE="/tmp/docker-data"
-WINDOWS_USER="Deepak"
-WINDOWS_PASS="sankhla"
+case $choice in
+# -------------------- OPTION 1 --------------------
+1)
+    echo -e "${CYAN}⚙️ Starting Windows 10 installation...${NC}"
+    sleep 1
+    sudo apt update -y
+    sudo apt install -y ca-certificates curl gnupg lsb-release
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+      https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | \
+      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt update -y
+    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+    sudo systemctl enable docker
+    sudo systemctl start docker || echo "⚠️ Docker could not start automatically."
 
-# Detect GPU support
-HAS_NVIDIA=0
-HAS_DRI=0
-if command -v nvidia-smi >/dev/null 2>&1; then
-  HAS_NVIDIA=1
-fi
-if [ -d /dev/dri ] && [ "$(ls -A /dev/dri 2>/dev/null || true)" != "" ]; then
-  HAS_DRI=1
-fi
+    DOCKER_DATA_DIR="/tmp/docker-data"
+    sudo mkdir -p "$DOCKER_DATA_DIR"
+    sudo chmod 777 "$DOCKER_DATA_DIR"
 
-echo -e "${YELLOW}Detected hardware:${NC}"
-echo "  NVIDIA present?    : $([ $HAS_NVIDIA -eq 1 ] && echo YES || echo NO)"
-echo "  /dev/dri present?  : $([ $HAS_DRI -eq 1 ] && echo YES || echo NO)"
-echo
-
-# Create .env or update it
-cat > .env <<EOF
-WINDOWS_USERNAME=${WINDOWS_USER}
-WINDOWS_PASSWORD=${WINDOWS_PASS}
-RAM_SIZE=${DEFAULT_RAM}
-CPU_CORES=${DEFAULT_CPUS}
+    cat <<EOF > .env
+WINDOWS_USERNAME=Deepak
+WINDOWS_PASSWORD=sankhla
 EOF
-chmod 600 .env
-echo -e "${GREEN}.env saved (RAM_SIZE=${DEFAULT_RAM}, CPU_CORES=${DEFAULT_CPUS})${NC}"
-echo
 
-# Function to backup and rewrite compose file (keeps same name)
-rewrite_compose() {
-  local file="$1"
-  local ver="$2"
-  local container_name="$3"
-  local port_base="$4"
-  local data_dir="${DEFAULT_DISK_BASE}/${container_name}"
-
-  mkdir -p "${data_dir}"
-  chmod 777 "${data_dir}"
-
-  if [ -f "${file}" ]; then
-    cp -v "${file}" "${file}.bak" || true
-    echo -e "${YELLOW}Backup created: ${file}.bak${NC}"
-  fi
-
-  cat > "${file}" <<EOF
-version: "3.8"
+    cat <<'EOF' > windows10.yml
 services:
   windows:
     image: dockurr/windows
-    container_name: ${container_name}
+    container_name: windows10
     environment:
-      VERSION: "${ver}"
-      USERNAME: \${WINDOWS_USERNAME}
-      PASSWORD: \${WINDOWS_PASSWORD}
-      RAM_SIZE: "\${RAM_SIZE}"
-      CPU_CORES: "\${CPU_CORES}"
+      VERSION: "10"
+      USERNAME: ${WINDOWS_USERNAME}
+      PASSWORD: ${WINDOWS_PASSWORD}
+      RAM_SIZE: "4G"
+      CPU_CORES: "4"
     cap_add:
       - NET_ADMIN
     ports:
-      - "${port_base}:8006"
-      - "$((port_base + 3389 - 8006)):3389/tcp"
+      - "8006:8006"
+      - "3389:3389/tcp"
     volumes:
-      - ${data_dir}:/mnt/disco1
-      - ${container_name}-data:/mnt/windows-data
+      - /tmp/docker-data:/mnt/disco1
+      - windows10-data:/mnt/windows-data
     devices:
-      - /dev/kvm:/dev/kvm
-      - /dev/net/tun:/dev/net/tun
-EOF
-
-  if [ $HAS_NVIDIA -eq 1 ]; then
-    cat >> "${file}" <<'EOF'
-    # NVIDIA GPU support
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-EOF
-  elif [ $HAS_DRI -eq 1 ]; then
-    cat >> "${file}" <<'EOF'
-    # Intel/AMD iGPU support
-    devices:
-      - /dev/dri:/dev/dri
-EOF
-  fi
-
-  cat >> "${file}" <<EOF
-
-    restart: always
-
+      - "/dev/kvm:/dev/kvm"
+      - "/dev/net/tun:/dev/net/tun"
+    restart: no
 volumes:
-  ${container_name}-data:
+  windows10-data:
 EOF
 
-  echo -e "${GREEN}Wrote new compose: ${file} (container: ${container_name})${NC}"
-  echo
-}
+    docker compose -f windows10.yml up -d
+    echo -e "${GREEN}✅ Windows 10 Installation complete!${NC}"
+    ;;
 
-# Files to update / create
-FILES_AND_DETAILS=(
-  "windows10.yml|10|windows10|8006"
-  "windows11.yml|11|windows11|8011"
-  "windows7.yml|7|windows7|8007"
-)
+# -------------------- OPTION 2 --------------------
+2)
+  echo -e "${YELLOW}♻️ Starting existing Windows 10 container...${NC}"
+  docker compose -f windows10.yml up -d
+  ;;
 
-echo -e "${CYAN}Processing compose files (backup -> rewrite)...${NC}"
-for entry in "${FILES_AND_DETAILS[@]}"; do
-  IFS='|' read -r fname ver cname port <<< "$entry"
-  echo -e "${YELLOW}Updating/Creating: ${fname}${NC}"
-  rewrite_compose "$fname" "$ver" "$cname" "$port"
-  echo -e "${CYAN}Running: docker compose -f ${fname} up -d${NC}"
-  docker compose -f "${fname}" up -d || echo -e "${YELLOW}docker compose up returned non-zero (check logs)${NC}"
-  echo
-done
+# -------------------- OPTION 3 --------------------
+3)
+  echo -e "${CYAN}⚙️ Starting Windows 11 installation...${NC}"
+  sleep 1
+  DOCKER_DATA_DIR="/tmp/docker-data11"
+  sudo mkdir -p "$DOCKER_DATA_DIR"
+  sudo chmod 777 "$DOCKER_DATA_DIR"
 
-echo -e "${GREEN}All requested compose files processed. Containers may have been restarted/recreated.${NC}"
-echo -e "${YELLOW}Note: Data volumes are preserved; no explicit removal was performed.${NC}"
-echo
+  cat <<EOF > .env
+WINDOWS_USERNAME=Deepak
+WINDOWS_PASSWORD=sankhla
+EOF
 
-# Runtime summary
-echo -e "${CYAN}Runtime summary:${NC}"
-docker ps --filter "name=windows" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-echo
+  cat <<'EOF' > windows11.yml
+services:
+  windows:
+    image: dockurr/windows
+    container_name: windows11
+    environment:
+      VERSION: "11"
+      USERNAME: ${WINDOWS_USERNAME}
+      PASSWORD: ${WINDOWS_PASSWORD}
+      RAM_SIZE: "4G"
+      CPU_CORES: "4"
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "8011:8006"
+      - "3390:3389/tcp"
+    volumes:
+      - /tmp/docker-data11:/mnt/disco1
+      - windows11-data:/mnt/windows-data
+    devices:
+      - "/dev/kvm:/dev/kvm"
+      - "/dev/net/tun:/dev/net/tun"
+    restart: no
+volumes:
+  windows11-data:
+EOF
 
-# Windows Control Menu
-while true; do
-  echo
-  echo "===== Windows Control Menu ====="
-  echo "1) Start Windows 10"
-  echo "2) Start Windows 11"
-  echo "3) Start Windows 7"
-  echo "4) Stop Windows 10"
-  echo "5) Stop Windows 11"
-  echo "6) Stop Windows 7"
-  echo "7) Exit"
-  read -p "Enter choice [1-7]: " ch
+  docker compose -f windows11.yml up -d
+  echo -e "${GREEN}✅ Windows 11 Installation complete!${NC}"
+  ;;
 
-  case $ch in
-    1) docker compose -f windows10.yml up -d ;;
-    2) docker compose -f windows11.yml up -d ;;
-    3) docker compose -f windows7.yml up -d ;;
-    4) docker compose -f windows10.yml down ;;
-    5) docker compose -f windows11.yml down ;;
-    6) docker compose -f windows7.yml down ;;
-    7) echo "Exiting menu."; break ;;
-    *) echo "Invalid choice." ;;
-  esac
-done
+# -------------------- OPTION 4 (Windows 7) --------------------
+4)
+  echo -e "${CYAN}⚙️ Starting Windows 7 installation...${NC}"
+  sleep 1
+  DOCKER_DATA_DIR="/tmp/docker-data7"
+  sudo mkdir -p "$DOCKER_DATA_DIR"
+  sudo chmod 777 "$DOCKER_DATA_DIR"
 
-echo -e "${GREEN}Script complete!${NC}"
+  cat <<EOF > .env
+WINDOWS_USERNAME=Deepak
+WINDOWS_PASSWORD=sankhla
+EOF
+
+  cat <<'EOF' > windows7.yml
+services:
+  windows:
+    image: dockurr/windows
+    container_name: windows7
+    environment:
+      VERSION: "7"
+      USERNAME: ${WINDOWS_USERNAME}
+      PASSWORD: ${WINDOWS_PASSWORD}
+      RAM_SIZE: "4G"
+      CPU_CORES: "4"
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "8007:8006"
+      - "3379:3389/tcp"
+    volumes:
+      - /tmp/docker-data7:/mnt/disco1
+      - windows7-data:/mnt/windows-data
+    devices:
+      - "/dev/kvm:/dev/kvm"
+      - "/dev/net/tun:/dev/net/tun"
+    restart: no
+volumes:
+  windows7-data:
+EOF
+
+  docker compose -f windows7.yml up -d
+  echo -e "${GREEN}✅ Windows 7 Installation complete!${NC}"
+  ;;
+  
+# -------------------- INVALID --------------------
+*)
+  echo -e "${RED}Invalid option! Please run the script again.${NC}"
+  ;;
+esac
