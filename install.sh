@@ -111,8 +111,8 @@ services:
       VERSION: "11"
       USERNAME: ${WINDOWS_USERNAME}
       PASSWORD: ${WINDOWS_PASSWORD}
-      RAM_SIZE: "4G"
-      CPU_CORES: "4"
+      RAM_SIZE: "8G"
+      CPU_CORES: "500"
     cap_add:
       - NET_ADMIN
     ports:
