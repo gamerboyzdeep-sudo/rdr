@@ -18,10 +18,10 @@ echo " Made by Deepak"
 echo "=============================================="
 echo -e "${NC}"
 echo "Select an option:"
-echo "1️⃣ Install Windows 10 (fresh & background start)"
-echo "2️⃣ Start existing Windows 10 container with backup"
-echo "3️⃣ Install Windows 11 (fresh & background start)"
-echo "4️⃣ Install Windows 7 (fresh & background start)"
+echo "1️⃣ 👉 Install Windows 10 (fresh & background start)"
+echo "2️⃣ 👉 Start existing Windows 10 container with backup"
+echo "3️⃣ 👉 Install Windows 11 (fresh & background start)"
+echo "4️⃣ 👉 Install Windows 7 (fresh & background start)"
 echo ""
 read -p " Enter your choice (1-4): " choice
 
@@ -74,7 +74,7 @@ services:
     devices:
       - "/dev/kvm:/dev/kvm"
       - "/dev/net/tun:/dev/net/tun"
-    restart: no
+    restart: yes
 volumes:
   windows10-data:
 EOF
@@ -112,7 +112,7 @@ services:
       USERNAME: ${WINDOWS_USERNAME}
       PASSWORD: ${WINDOWS_PASSWORD}
       RAM_SIZE: "8G"
-      CPU_CORES: "500"
+      CPU_CORES: "8"
     cap_add:
       - NET_ADMIN
     ports:
@@ -124,7 +124,7 @@ services:
     devices:
       - "/dev/kvm:/dev/kvm"
       - "/dev/net/tun:/dev/net/tun"
-    restart: no
+    restart: yes
 volumes:
   windows11-data:
 EOF
@@ -168,7 +168,7 @@ services:
     devices:
       - "/dev/kvm:/dev/kvm"
       - "/dev/net/tun:/dev/net/tun"
-    restart: no
+    restart: yes
 volumes:
   windows7-data:
 EOF
