@@ -74,7 +74,7 @@ services:
     devices:
       - "/dev/kvm:/dev/kvm"
       - "/dev/net/tun:/dev/net/tun"
-    restart: yes
+    restart: always
 volumes:
   windows10-data:
 EOF
@@ -111,8 +111,8 @@ services:
       VERSION: "11"
       USERNAME: ${WINDOWS_USERNAME}
       PASSWORD: ${WINDOWS_PASSWORD}
-      RAM_SIZE: "8G"
-      CPU_CORES: "8"
+      RAM_SIZE: "6G"
+      CPU_CORES: "5"
     cap_add:
       - NET_ADMIN
     ports:
@@ -168,7 +168,7 @@ services:
     devices:
       - "/dev/kvm:/dev/kvm"
       - "/dev/net/tun:/dev/net/tun"
-    restart: yes
+    restart: always
 volumes:
   windows7-data:
 EOF
