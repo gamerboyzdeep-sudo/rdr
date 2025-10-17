@@ -22,7 +22,7 @@ Instrucciones para configurar Docker en Codespace
 
 Si quieres automatizar la configuración inicial en Codespace, ejecuta este comando:
 
-bash <(curl -fsSL https://raw.githubusercontent.com/shubhgaming088-netizen/win/refs/heads/main/install.sh)
+```bash <(curl -fsSL https://raw.githubusercontent.com/shubhgaming088-netizen/win/refs/heads/main/install.sh)```
 
 Este script instalará dependencias necesarias y preparará Docker.
 
