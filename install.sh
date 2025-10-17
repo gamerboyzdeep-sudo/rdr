@@ -124,7 +124,7 @@ services:
     devices:
       - "/dev/kvm:/dev/kvm"
       - "/dev/net/tun:/dev/net/tun"
-    restart: yes
+    restart: always
 volumes:
   windows11-data:
 EOF
